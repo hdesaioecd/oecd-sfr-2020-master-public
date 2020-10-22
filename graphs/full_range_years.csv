@@ -1,0 +1,45 @@
+variablename,min.year,max.year,timespan,n,expected,delta
+Access to justice,2012,2018,7,1232,1225,-7
+Aid dependency,2009,2018,10,1910,1750,-160
+Armed security officers,2008,2019,12,1945,2100,155
+Battle-related deaths,2010,2018,9,2088,1575,-513
+Clientelism,2012,2018,7,1232,1225,-7
+Conflict risk,2009,2018,10,1910,1750,-160
+Control over territory,2012,2018,7,1218,1225,7
+Corruption,2012,2018,7,1229,1225,-4
+Debt,1980,2019,40,4467,7000,2533
+Disaster risk,2009,2018,10,1910,1750,-160
+Education,1990,2018,29,4964,5075,111
+Environmental performance,2018,2018,1,180,175,-5
+Food insecurity,2009,2018,10,3812,1750,-2062
+Formal alliances,2000,2016,17,3095,2975,-120
+GDP growth,1961,2018,58,9312,10150,838
+Gender discrimination,2017,2017,1,135,175,40
+Gender inequality,2010,2018,9,1396,1575,179
+GINI,2012,2017,6,950,1050,100
+Government effectiveness,2000,2018,19,7440,3325,-4115
+Homicide rate,2000,2017,18,2632,3150,518
+Horizontal inequality,2012,2018,7,1232,1225,-7
+Impact of terrorism,2002,2018,17,2839,2975,136
+Infectious diseases,1990,2017,28,5460,4900,-560
+Judicial constraints,2012,2018,7,1232,1225,-7
+Legislative constraints,2012,2018,7,1212,1225,13
+NEET,2000,2019,20,1287,3500,2213
+Non-state and one-sided violence,2007,2018,12,2772,2100,-672
+Physical integrity,2012,2018,7,1232,1225,-7
+Police officers,2008,2019,12,1945,2100,155
+Regional government independence,2012,2018,7,1226,1225,-1
+Regulatory quality,2000,2018,19,3719,3325,-394
+Remoteness,2010,2016,7,1046,1225,179
+Resource dependence,1970,2017,48,8348,8400,52
+Rule of law,2000,2018,19,7538,3325,-4213
+Share of women in labour force,1990,2019,30,5610,5250,-360
+Socio-economic vulnerability,2009,2018,10,3820,1750,-2070
+Stability,2000,2018,19,3734,3325,-409
+Strength of civil society,2012,2018,7,2464,1225,-1239
+Unemployment rate,1991,2018,28,5236,4900,-336
+Uprooted people,2009,2018,10,1910,1750,-160
+Urbanisation,1960,2018,59,25146,10325,-14821
+Violent crime,2016,2016,1,144,175,31
+Voice and accountability,2000,2018,19,7474,3325,-4149
+Women in parliament,2001,2018,18,3335,3150,-185

@@ -1,0 +1,26 @@
+source("./lib/funcs.R")
+filename <- "./data/2017 sfr model data/EVI_retros_2018.xlsx"
+evi_raw <- read_excel(filename, "data",trim_ws = TRUE) #import main data sheet that provides time series
+
+#clean and standardize dataset - use remoteness index variable (*no adjustments needed*) - use the values as-is
+evi_clean <- setDT(evi_raw)[year > 2009,.(iso3c = iso_3,year,value = remot_index,variablename = "Remoteness")]
+
+#assign 0 value to OECD countries (using convention followed in SFR 2018)
+oecd_raw <- read_excel("./data/additional data/OECD countries.xlsx")
+#create dataframe for OECD countries with 0 value - there are 36 OECD countries at present.
+oecd_clean <- setDT(oecd_raw)[,.(iso3c = Country,variablename = "Remoteness", year = 2016, value = 0)]
+oecd_clean$iso3c <- country.code.name(oecd_clean$iso3c) #ensure that both datasets have iso3 codes in the iso3c column before
+#running next line
+setkey(evi_clean,iso3c)
+evi_clean[oecd_clean,value := i.value] #merge so that OECD countries in the evi_clean dataset are assigned a 0 value
+evi_combined <- rbind(evi_clean,oecd_clean) #combine both dataframes
+#note that in evi_combined, five countries will be duplicates because we used rbind - just remove those
+#using distinct:
+evi_combined <- evi_combined %>% distinct()
+#this is correct - there are 176 countries in the dataframe.
+#extend time series for oecd countries
+evi_combined_test <- extend.time.series(evi_combined,0) #this is okay - it will only extend time series for the OECD countries, 
+#because all other countries have values assigned to them. 
+evi_combined$iso3c <- country.code.name(evi_combined$iso3c)
+raw.data$evi <- evi_combined
+rmExcept("raw.data")

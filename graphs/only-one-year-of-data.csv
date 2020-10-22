@@ -1,0 +1,4 @@
+variablename,min.year,max.year,timespan,n,expected,delta
+Environmental performance,2018,2018,1,180,175,-5
+Gender discrimination,2017,2017,1,135,175,40
+Violent crime,2016,2016,1,144,175,31

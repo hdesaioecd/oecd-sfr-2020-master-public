@@ -1,0 +1,742 @@
+#this script analyses changes in the fragility framework in line with SFR 2018.
+#HD updated this script for SFR 2020 starting Aug. 27, 2019, adding sections on analyses
+#with descriptive stats and tests of variables.
+
+warning("Address Kosovo issue")
+population <- read_excel("./data/population data/world_pop_2018_timeseries.xlsx",
+                        "ESTIMATES",skip = 16) %>% clean_names() %>% 
+    filter(type == "Country") %>% 
+    select(-c(index,variant,notes,country_code,type,parent_code)) %>% 
+    rename(country = region_subregion_country_or_area) %>% 
+    pivot_longer(names_to = "year",values_to = "value",-country) %>% 
+    mutate(value = as.numeric(value)*1000,
+           year = gsub("x","",year),
+           year = as.numeric(year),
+           iso3c = countrycode(.$country,"country.name.en","iso3c",
+                               custom_match = c("Eswatini" = "SWZ"))) %>% 
+    rename(population = value)
+
+##import list of ODA eligible recipients for this analysis
+ODA_recipients <- read_excel("./data/additional data/DAC_CRS_Codes.xlsx",sheet = "Recipient") %>% 
+    clean_names() %>% remove_empty("cols") %>% select(-x13) %>% 
+    mutate(iso3c = countrycode(recipient_name_en,"country.name.en","iso3c",
+                               custom_match = c("Eswatini" = "SWZ",
+                                                "Kosovo" = "XKX",
+                                                "Micronesia" = "FSM"))) %>% 
+    filter(complete.cases(iso3c)) %>% 
+    select(iso3c,country = recipient_name_en,region) %>% 
+    mutate(category = "ODA eligible")
+
+#export clusters
+clusters$country <- country.code.name(clusters$iso3c)
+colours <- mean.plot %>% rename(color = colour) %>% select(cluster,color) %>% distinct()
+clusters_adj <- clusters %>% left_join(colours,by = "cluster") %>% dplyr::select(dimension,iso3c,country,color) %>% 
+    arrange(dimension,color,iso3c)
+clusters_split <- clusters_adj %>% split(.$dimension)
+
+write.xlsx(clusters_split,"./data_out2017/clusters/clusters.xlsx")
+
+#export dimesional values at the indicator level
+sfr.time.series_split <- sfr.time.series %>%
+    filter(year > 2013) %>% 
+    mutate(location = countrycode(.$iso3c,
+                                  "iso3c","un.name.en",
+                                  custom_match = c("PSE" = "West Bank and Gaza Strip",
+                                                   "SWZ" = "eSwatini"))) %>% 
+    select(iso3c,location,year,variablename,dimension,value) %>% 
+    left_join(aggr.pca_adj[,c("iso3c","fragility.level")],by = "iso3c") %>%
+    mutate(fragility.level = replace_na(fragility.level,"Rest of the World")) %>%
+    select(iso3c,location,fragility.level,year,variablename,dimension,value) %>% 
+    split(.$dimension)
+
+write.xlsx(sfr.time.series_split,"./data_out2017/Dataset - Raw Indicator Scores, by Dimension.xlsx")
+
+#export counts of countries
+iso_bygroup <- read_xls("./data/additional data/WB_2019_classifications.xls","Groups") %>% 
+    clean_names() %>% 
+    rename(iso3c = country_code)
+
+#integrate ODA eligible countries, and make the country name NA here so that it does
+#not conflict with World Bank names. You don't need them anyways.
+ODA_recipients_adjustedfor_WB <- ODA_recipients %>% 
+    select(iso3c,country_name = country) %>% 
+    mutate(country_name = "NA - Use iso",group_code = "ODA",group_name = "ODA eligible countries")
+    
+iso_bygroup <- rbind(iso_bygroup,ODA_recipients_adjustedfor_WB)
+
+iso_counts <- iso_bygroup %>% 
+    group_by(group_name) %>% 
+    summarise(count_total = n())
+
+iso_counts_fragile <- iso_bygroup %>% 
+    left_join(aggr.pca_adj,by = "iso3c") %>% 
+    filter(complete.cases(.))
+
+iso_counts_fragile_bygroup <- iso_counts_fragile %>% 
+    group_by(group_name) %>% 
+    summarise(count_fragile = n()) %>% 
+    left_join(iso_counts,by = "group_name") %>% 
+    mutate(proportion = count_fragile/count_total*100)
+
+#export counts of countries, population-weighted
+##add Kosovo's population here, for the sake of exactness
+##also do this for Channel Islands (to ensure full coverage across WB groups)
+
+population_fromwb <- fread("./data/population data/worldbank_pop_2018_forkosovo.csv",
+                           header = T) %>% clean_names() %>% 
+    filter(country_name %in% c("Kosovo","Channel Islands")) %>% 
+    select(iso3c = country_code,country_name,x2018) %>% 
+    rename(population = x2018,country = country_name) %>% 
+    mutate(year = 2018)
+
+population_filtered <- population %>% filter(year == 2018) %>% 
+    rbind(population_fromwb)
+
+iso_counts_wpop <- iso_bygroup %>% left_join(population_filtered[,c("iso3c","year","population")],by = "iso3c") %>% 
+    filter(complete.cases(.))
+
+iso_counts_wpop_bygroup <- iso_counts_wpop %>% 
+    group_by(group_name) %>% 
+    summarise(population_all = sum(population)/1000000)
+
+#confirm that the unique(iso3c) is 57
+iso_counts_wpop_fragile <- iso_counts_wpop %>% 
+    left_join(aggr.pca_adj,by = "iso3c") %>% 
+    filter(complete.cases(fragility.level))
+
+iso_counts_wpop_fragile_bygroup <- iso_counts_wpop_fragile %>% 
+    group_by(group_name) %>% 
+    summarise(population_fragile = sum(population)/1000000) %>% 
+    left_join(iso_counts_wpop_bygroup,by = "group_name") %>% 
+    mutate(proportion = population_fragile/population_all*100)
+
+iso_counts_export <- list("Countries" = iso_counts_fragile_bygroup %>% select(Groups = group_name,
+                                                                              `Fragile Contexts` = count_fragile,
+                                                                              `Total Contexts` = count_total,
+                                                                              Proportion = proportion),
+                          "Population" = iso_counts_wpop_fragile_bygroup %>% 
+                              select(Groups = group_name,
+                                     `Population in Fragile Contexts in 2018` = population_fragile,
+                                     `Total Population in 2018` = population_all,
+                                     Proportion = proportion))
+
+write.xlsx(iso_counts_export,"./data_out2017/Dataset - Country Representation by Group.xlsx")
+
+# Rankings of each country by dimension -----------------------------------
+
+raw.data_rankings <- raw.data %>% 
+    select(iso3c,year,ends_with("PC1")) %>% 
+    mutate(location = countrycode(.$iso3c,"iso3c","un.name.en",
+                                  custom_match = c("PSE" = "West Bank and Gaza Strip",
+                                                   "SWZ" = "eSwatini"))) %>% 
+    select(iso3c,location,everything()) %>% 
+    group_by(year) %>% 
+    mutate(econ_rank = rank(Economic.PC1,ties.method = 'first'),
+           env_rank = rank(Environmental.PC1,ties.method = 'first'),
+           pol_rank = rank(Political.PC1,ties.method = 'first'),
+           sec_rank = rank(Security.PC1,ties.method = 'first'),
+           soc_rank = rank(Societal.PC1,ties.method = 'first'),
+           agg_rank = rank(Aggregate.PC1,ties.method = 'first')) %>% 
+    left_join(aggr.pca_adj[,c("iso3c","fragility.level")],by = "iso3c") %>%
+    mutate(fragility.level = replace_na(fragility.level,"Rest of the World")) %>%
+    left_join(ODA_recipients[,c("iso3c","category")],by = "iso3c") %>%
+    mutate(category = replace_na(category,"Non-ODA eligible")) %>% 
+    select(iso3c,location,year,fragility.level,ODA_eligibility = category,ends_with("rank")) %>% 
+    split(.$year)
+
+rankings_names <- c("iso3c","location","fragility.level","ODA_eligibility","econ_rank","env_rank","pol_rank","sec_rank","soc_rank",
+                    "agg_rank")
+raw.data_rankings <- lapply(raw.data_rankings,"[", ,rankings_names)
+
+write.xlsx(raw.data_rankings,"./data_out2017/Rankings - Context, by Dimension and Year.xlsx")
+
+# Subset necessary datasets -----------------------------------------------
+# Export raw and scaled data ----------------------------------------------
+sfr.time.series_subset <- sfr.time.series %>% 
+    filter(year %in% 2014:2019) %>% 
+    mutate(location = countrycode(.$iso3c,
+                                  "iso3c","un.name.en",
+                                  custom_match = c("PSE" = "West Bank and Gaza Strip")),
+           variablename = gsub("\\(C)","",variablename),
+           variablename = gsub("\\(R)","",variablename),
+           variablename = trimws(variablename)) %>% 
+    select(iso3c,location,year,variablename,dimension,raw_value = value) %>% 
+    group_by(dimension,year) %>% 
+    mutate(scaled_value = scale(raw_value))
+
+#note above: the scaled values for the variables from above will not be the same as the 
+#scaling for the PCA, because the PCA removes highly correlated variables before 
+#scaling (e.g., there are 11 variables in the economic dimension of the PCA, whereas
+#12 variables in the initial dataset.)
+#this is fine. But just be careful in terms of your analysis.
+    
+
+# Differences b/t 2020 and previous lists ---------------------------------
+
+list_2018_raw <- fread("./data/additional data/list_2018.csv") 
+list_2018 <- list_2018_raw %>% filter(year == 2017) %>% select(iso3c,Aggregate.PC1) %>% 
+    filter(Aggregate.PC1 < -1.20)
+list_2018$country <- country.code.name(list_2018$iso3c)
+list_2016 <- fread("./data/additional data/list_2016.csv") %>% filter(fragility.level %in% c("Fragile","Extreme Fragility"))
+list_2016$country <- country.code.name(list_2016$iso3c)
+
+list_2020 <- aggr.pca_adj %>% filter(Fragility < -1.20)
+
+#custom function for the analyiss below
+cbindPad <- function(...){
+    args <- list(...)
+    n <- sapply(args,nrow)
+    mx <- max(n)
+    pad <- function(x, mx){
+        if (nrow(x) < mx){
+            nms <- colnames(x)
+            padTemp <- matrix("", mx - nrow(x), ncol(x))
+            colnames(padTemp) <- nms
+            if (ncol(x)==0) {
+                return(padTemp)
+            } else {
+                return(rbind(x,padTemp))
+            }
+        }
+        else{
+            return(x)
+        }
+    }
+    rs <- lapply(args,pad,mx)
+    return(do.call(cbind,rs))
+}
+
+#countries that were on the 2018 list but are not on the 2020 list
+incl_2018 <- as.data.frame(matrix(setdiff(list_2018$country,list_2020$location),dimnames = list(NULL,c("Countries Moving off the List"))))
+
+#countries that were not on the 2018 list but are on the 2020 list
+excl_2018 <- as.data.frame(matrix(setdiff(list_2020$location,list_2018$country),dimnames = list(NULL,c("Countries Moving onto the List"))))
+
+changes_from_2018 <- cbindPad(incl_2018,excl_2018)
+
+#countries that were on the 2016 list but are not on the 2020 list
+incl_2016 <- as.data.frame(matrix(setdiff(list_2016$country,list_2020$location),dimnames = list(NULL,c("Countries on 2016 list, Not on 2020 list"))))
+
+#countries that were not on the 2016 list but are on the 2020 list
+excl_2016 <- as.data.frame(matrix(setdiff(list_2020$location,list_2016$country),dimnames = list(NULL,c("Countries on 2020 list, Not on 2016 list"))))
+
+changes_from_2016 <- cbindPad(incl_2016,excl_2016)
+
+changes_bt_lists <- list("From 2018 to 2020" = changes_from_2018,
+                         "From 2016 to 2020" = changes_from_2016)
+
+write.xlsx(changes_bt_lists,"./data_out2017/changes/Changes Between Lists.xlsx")
+
+
+# Viz - PCA Analysis ------------------------------------------------------
+
+#scree plots of PC variation
+pol_scree <- fviz_eig(all.pca$Political$`2019`,addlabels = TRUE,title = "") +
+    labs(x = "Principal Components",y = "% of variance explained")
+    
+ggsave("./graphs/scree plots/Political.jpg",pol_scree)
+#extract and visualise latest year (in this case, 2019)
+all.pca.2019 <- lapply(all.pca,function(i){
+    i[["2019"]]
+})
+
+#extract variables from PCA analysis
+pca.var.dimension <- lapply(all.pca.2019,function(i){
+    get_pca_var(i)
+})
+
+#extract individuals from PCA analysis
+pca.ind.dimension <- lapply(all.pca.2019,function(i){
+    get_pca_ind(i)
+})
+
+##CONTRIBUTION - BAR PLOTS
+#visualise contributions to the first two dimensions (PCAs), using bar plots. 
+#contributions is a measure of which variables are the most important in explaining variability in a dataset
+#the ones correlated with the first two PCAs are the most important in explaining that 
+#variability. 
+
+contrib.bar.viz <- lapply(all.pca.2019, function(i){fviz_contrib(i,choice = "var",
+                                                                 axes = 1:2) + 
+        ggtitle(paste("Contributions to PC1 and PC2 in the",i$dimension,"Dimension"))})
+
+lapply(names(contrib.bar.viz),
+       function(x) ggsave(filename = paste0("./graphs/contributions/PC1and2/",x,".jpg",sep = ""),
+                          plot = contrib.bar.viz[[x]]))
+
+contrib.bar.viz.Dim1 <- lapply(all.pca.2019, function(i){fviz_contrib(i,choice = "var",
+                                                                      axes = 1) + 
+        ggtitle(paste("Contributions to PC1 in the",i$dimension,"Dimension"))}) 
+
+lapply(names(contrib.bar.viz.Dim1),
+       function(x)ggsave(filename = paste0("./graphs/contributions/PC1/",x,".jpg",sep = ""),
+                         plot = contrib.bar.viz.Dim1[[x]]))
+
+contrib.bar.viz.Dim2 <- lapply(all.pca.2019, function(i){fviz_contrib(i,choice = "var",
+                                                                      axes = 2) + 
+        ggtitle(paste("Contributions to PC2 in the",i$dimension,"Dimension"))})
+
+lapply(names(contrib.bar.viz.Dim2),
+       function(x)ggsave(filename = paste0("./graphs/contributions/PC2/",x,".jpg",sep = ""),
+                         plot = contrib.bar.viz.Dim2[[x]]))
+
+
+# Matching Analysis -------------------------------------------------------
+# matches countries that have the same cluster across all dimensions
+ 
+matching_dataset <- aggr.pca.full %>% 
+    select(iso3c,description) 
+string_split <- str_split_fixed(matching_dataset$description, " ",3)
+matching_dataset <- cbind(matching_dataset,string_split) %>% rename(severity = `1`,
+                                                                    dimension = `2`) %>% 
+    select(-c(description,`3`)) %>% spread(dimension,severity) %>% 
+    mutate(iso3c = as.character(iso3c))
+
+export_dimensional_analysis <- aggr.pca.full %>% 
+    select(iso3c,description,fragility.level) %>% filter(fragility.level %in% c("Extremely Fragile","Fragile"))
+export_dimensional_analysis <- na.omit(export_dimensional_analysis) %>% select(iso3c,description)
+fwrite(export_dimensional_analysis,"./data_out2017/Dimensional Categories for ODA Analysis.csv")
+
+dupe <- matching_dataset[,c("Economic","Environmental","Political","Security","Societal")]
+
+setDT(aggr.pca.full)
+matches <- setDT(matching_dataset)[duplicated(dupe)|duplicated(dupe,fromLast = T),
+                            ][aggr.pca.full,on = "iso3c"
+                              ][,.(iso3c,Economic,Environmental,Political,Security,Societal,fragility.level)]
+matches <- na.omit(matches)
+matches_ordered <- matches[with(matches, order(Economic,Environmental,Political,Security,Societal))] %>% distinct()
+matches_ordered$iso3c <- country.code.name(matches_ordered$iso3c)
+
+fwrite(matches_ordered,"./data_out2017/Matches Across Clusters - by Context.csv")
+
+
+# Correlation between Dimensions ------------------------------------------
+##Compute relationship between dimensions
+#extract scores from AGG PCA analysis (have been standardized)
+dim_analysis <- data.frame(iso3c = all.pca$Aggregate$`2019`$iso3c,
+                           all.pca$Aggregate$`2019`$data)
+library(Hmisc)
+#custom function to flatten correlation matrix with coefficients and p-values
+flattenCorrMatrix <- function(cormat, pmat) {
+    ut <- upper.tri(cormat)
+    data.frame(
+        row = rownames(cormat)[row(cormat)[ut]],
+        column = rownames(cormat)[col(cormat)[ut]],
+        cor  =(cormat)[ut],
+        p = pmat[ut]
+    )
+}
+
+dim_analysis_corr <- rcorr(as.matrix(dim_analysis[,c("Economic.PC1","Environmental.PC1","Political.PC1","Security.PC1","Societal.PC1")]))
+dim_analysis_corr <- flattenCorrMatrix(dim_analysis_corr$r,dim_analysis_corr$P)
+
+
+# Aggregate Changes -------------------------------------------------------
+
+##global fragility - shifts over time
+agg_overtime <- agg %>% filter(year > 2013) %>% 
+    group_by(year) %>% 
+    summarise(average = mean(value)) %>% 
+    mutate(average = -average)
+
+ggplot(data = agg_overtime,
+       aes(x = year, y = average, group = 1)) +
+    geom_line()
+
+##Which countries have been fragile over time
+#define thresholds
+extr.fragility = -2.5
+fragility = -1.2
+
+agg = lapply(all.pca$Aggregate, function(x){
+    x = data.frame(iso3c = x$iso3c, value = x$x[,1])
+    return(x)
+})
+agg = bind_rows(agg, .id = "year")
+
+#create dataframes of countries that have been fragile and extremely fragile each year, using a TRUE/FALSE 
+overtime <- setDT(agg)[,.(iso3c,value,
+                  fragile = value < fragility,
+                  other_fragile = between(value,extr.fragility,fragility),
+                  extreme_fragile = value < extr.fragility),year
+                ][year >= 2014,.(year,iso3c = as.character(iso3c),fragile,extreme_fragile)] #subset greater than 2014
+overtime$country <- country.code.name(overtime$iso3c)
+overtime_fragile <- overtime %>% select(-extreme_fragile) %>% mutate(fragile = as.numeric(fragile)) %>% spread(year,fragile) %>% janitor::adorn_totals()
+overtime_extremely_fragile <- overtime %>% select(-fragile) %>% mutate(extreme_fragile = as.numeric(extreme_fragile)) %>% 
+    spread(year,extreme_fragile) %>% 
+    janitor::adorn_totals()
+
+#export that dataframe
+list_overtime_categories <- list("Fragile" = overtime_fragile,"Extremely Fragile" = overtime_extremely_fragile)
+library(openxlsx)
+write.xlsx(list_overtime_categories,"./data_out2017/changes/Changes between Categories Over time.xlsx")
+
+###Compute numerical changes###
+##do it for overall trends first - calculating average and median fragility: 
+overtime_numerical <- setDT(agg)[,.(iso3c,value,fragility = findInterval(value,c(-50,extr.fragility,fragility,50))),year]
+overtime_numerical$fragility = c("Extremely Fragile", "Other Fragile", "Rest of the World")[overtime_numerical$fragility]
+
+overtime_fragile <- overtime_numerical %>% filter(year == 2019, fragility %in% c("Extremely Fragile","Other Fragile"))
+
+overtime_numerical_ranks <- overtime_numerical %>% filter(iso3c %in% unique(overtime_fragile$iso3c),
+                                                          year > 2013)
+
+average_fragility <- overtime_numerical[,.(value = mean(value,na.rm = T)),.(year,fragility)
+                                        ][,.(year = as.numeric(year),fragility,value)] 
+
+median_fragility <- overtime_numerical[,.(value = median(value,na.rm = T)),.(year,fragility)
+                                        ][,.(year = as.numeric(year),fragility,value)] 
+
+#note: set values to negative in the plots below to help interpretation - higher numbers = more fragility in the graph
+#plot average fragility
+ggplot(data = average_fragility %>% filter(year >= 2014),
+       mapping = aes(x = year,y = -value,
+                     color = fragility)) +
+    geom_line(size = 1) +
+    scale_x_continuous(breaks = average_fragility$year) +
+    labs(color = "Category",y = "Fragility Score",x = "Year") +
+    theme_bw()
+ggsave("./graphs/dimensional_fragility/average_aggregate.png",height = 8, width = 8)
+
+#plot median fragility
+ggplot(data = median_fragility %>% filter(year >= 2014),
+       mapping = aes(x = year,y = -value,
+                     color = fragility)) +
+    geom_line(scaled = T,size = 1) +
+    scale_x_continuous(breaks = average_fragility$year) +
+    labs(color = "Category",y = "Fragility Score",x = "Year") +
+    theme_bw()
+ggsave("./graphs/dimensional_fragility/median_aggregate.png",height = 8, width = 8)
+
+##now do it for dimensional fragility
+#use "raw.data" - computed in the SFR calculation and carried through all the way in this analysis. 
+#This is important because these are scaled values
+#following the second PCA calculation; it is shown in the time series dataset.
+#do this analysis in the following steps:
+#1) merge in the extremely fragile, other fragile, and non-fragile classifications from overtime_numerical above
+#2) subset to 2014 onwards
+#3) use SD to calculate averages across all columns by year by type of fragility
+raw.data_avg <- setDT(raw.data)[overtime_numerical,on = c("year","iso3c")][year >= 2014,.(iso3c,year,economic = Economic.PC1,environmental = Environmental.PC1,
+                                   political = Political.PC1,security = Security.PC1,societal = Societal.PC1,fragility)
+                                   ][,lapply(.SD,mean),.(year,fragility),.SDcols = c("economic","environmental","political","security","societal")]
+
+raw.data_avg <- raw.data_avg %>% gather(category, value,-c(year,fragility)) %>% mutate(year = as.numeric(year))
+
+dimension_vector <- c("economic","environmental","political","security","societal")
+#plot that analysis
+for(i in dimension_vector){
+ggplot(data = raw.data_avg %>% filter(category == i),
+       mapping = aes(x = year, y = -value,
+                     color = fragility)) + geom_line(size = 1) +
+    theme_bw() +
+    labs(color = "Fragility Category",
+         x = "",
+         y = "Fragility Score") +
+    ggtitle(paste0("Average fragility in the ",i," dimension, 2014-19"))
+    ggsave(paste0("./graphs/dimensional_fragility/",i,"_avg.png"))
+}
+
+##now do it by cluster:
+##note that the clusters are static over time - that is not the case for the fragility.level classifications in the analysis coded above
+warning("you need to make a decision about whether to cluster countries for each year, or just use the most recent year for the clustering, in this analysis")
+
+#first, join the relevant data
+raw.data_adj <- raw.data %>% select(-location)
+raw.data_long <- pivot_longer(raw.data_adj,names_to = "dimension",values_to = "value",-c(iso3c,year)) %>% 
+    filter(dimension %in% c("Economic.PC1","Environmental.PC1","Political.PC1","Security.PC1","Societal.PC1")) %>%
+    mutate(dimension = as.factor(dimension),
+           year = as.numeric(year)) %>% 
+    mutate(dimension = recode(dimension,"Economic.PC1" = "Economic",
+                              "Environmental.PC1" = "Environmental",
+                              "Political.PC1" = "Political",
+                              "Security.PC1" = "Security",
+                              "Societal.PC1" = "Societal"))
+
+cluster_analysis <- merge(raw.data_long,aggr.pca.full,on = c("iso3c","dimension")) %>% 
+    select(iso3c,year,value,dimension,description)
+
+cluster_analysis_avg <- setDT(cluster_analysis)[,.(value = mean(value)),.(dimension,description,year = as.numeric(year))]
+
+for(i in c("Economic","Environmental","Political","Security","Societal")){
+ggplot(data = cluster_analysis_avg %>% filter(dimension == i),
+       mapping = aes(x = year, y = -value,
+                     color = description)) +
+        geom_line(size = 1) +
+        theme_bw() +
+        labs(color = "Fragility Categories",
+             x = "",
+             y = "Fragility Score") +
+        ggtitle(paste0("Fragility overtime in ",i," dimension, 2014-19"))
+    ggsave(paste0("./graphs/cluster-analysis/timeseries/",i,"_avg.png"))
+}
+
+
+# Dimensional and Variable Changes -----------------------------------------------------------------
+
+### Dimensional-level Deltas -------------------------------------------------------------
+dimensional_changes_disag_all <- raw.data %>% mutate(year = as.numeric(year)) %>% arrange(-year) %>%  
+    gather(variablename, value, -c(iso3c, year)) %>% dplyr::filter(grepl("PC1", variablename))
+
+deltas_all <- hpc.change(dimensional_changes_disag_all) %>% filter(from == 2016,
+                                                                   to == 2019) %>% 
+    dplyr::arrange(absolute.diff) %>% 
+    dplyr::select(-c(prop.growth, annual.prop.growth))
+deltas_all$change = ifelse(deltas_all$absolute.diff < 0, "Deterioration", "Improvement")
+deltas_all$iso3c <- country.code.name(deltas_all$iso3c)
+deltas_all <- deltas_all %>% rename(location = iso3c) %>% left_join(aggr.pca_adj[,c("location","fragility.level")],by = "location")
+
+#export deteriorations and improvements
+##first, create subset of deltas dataset with only the countries that have experienced deteriorations in this time period in the aggregate
+deltas_fragile_agg_deterioration <- deltas_all %>% filter(variablename == "Aggregate.PC1",
+                                                      change == "Deterioration",
+                                                      fragility.level %in% c("Fragile",
+                                                                             "Extremely Fragile")) %>% rename(iso3c = location)
+##prepare a subset of all other dimensions, using the previous subsets - you will rbind these, and then split them into a list for ease of export
+deltas_fragile_other_deterioration <- deltas_all %>% rename(iso3c = location) %>% filter(variablename != "Aggregate.PC1",
+                                                        iso3c %in% unique(deltas_fragile_agg_deterioration$iso3c))
+
+deltas_fragile_deterioration <- rbind(deltas_fragile_agg_deterioration,
+                                      deltas_fragile_other_deterioration) %>% arrange(iso3c) %>% split(.$iso3c)
+write.xlsx(deltas_fragile_deterioration,"./data_out2017/changes/Changes within Each Dimension - by Context.xlsx")
+
+
+### Variable-level Deltas ----------------------------------------------------------------
+
+sfr.log.path <- "./data/indicator master list/SFR2020 Indicator Master List.xlsx"
+sfr.log <- openxlsx::read.xlsx(sfr.log.path,
+                     sheet = "raw.data.for.R") %>% dplyr::filter(include == 1) %>% dplyr::select(-variablename) %>% dplyr::rename(variablename = reportname)
+
+variable_changes_disag <- sfr.time.series_subset %>% dplyr::select(-scaled_value) %>% dplyr::rename(value = raw_value)
+
+deltas_byvar <- hpc.change(variable_changes_disag) %>%
+    dplyr::filter(from == 2016, to == 2019) %>% 
+    arrange(absolute.diff) %>% 
+    dplyr::select(-c(prop.growth,annual.prop.growth)) 
+
+deltas_byvar_final <- merge(deltas_byvar,sfr.log[,c("variablename","type","dimension","doesmoreincreasefragility")],by = "variablename") %>% 
+    arrange(absolute.diff)
+
+deltas_byvar_final$country <- country.code.name(deltas_byvar_final$iso3c)
+deltas_byvar_final <- deltas_byvar_final %>% dplyr::select(variablename,
+                                                           iso3c,country,
+                                                           num.years,from,from.value,
+                                                           to,to.value,absolute.diff,
+                                                           type,dimension,doesmoreincreasefragility)
+
+#need to be careful about the interpretation, because it is based on the directionality of the raw variable
+deltas_byvar_bydirectionality <- deltas_byvar_final %>% split(.$doesmoreincreasefragility)
+deltas_byvar_increasebad <- deltas_byvar_bydirectionality$`1` %>% dplyr::select(-c(doesmoreincreasefragility,type)) %>% 
+    dplyr::distinct()
+deltas_byvar_increasegood <- deltas_byvar_bydirectionality$`0` %>% dplyr::select(-c(doesmoreincreasefragility,type)) %>% 
+    dplyr::distinct()
+
+deltas_byvar_increasebad$change <- ifelse(deltas_byvar_increasebad$absolute.diff < 0,"Improvement","Deterioration")
+deltas_byvar_increasegood$change <- ifelse(deltas_byvar_increasegood$absolute.diff > 0,"Improvement","Deterioration")
+deltas_list <- list("Dimension" = deltas_all,
+                    "Absolute Increase = Bad" = deltas_byvar_increasebad,"Absolute Increase = Good" = deltas_byvar_increasegood)
+write.xlsx(deltas_list,"./data_out2017/changes/Changes - All Contexts, by Variable and Dimension.xlsx")
+
+# Sub-group analysis (regional and IG) -------------------------------------------------------
+warning("Change all of this analysis to reflect SFR 2020")
+# 
+
+recode_dimension <- c(`Aggregate.PC1` = "Aggregate",
+                      `Economic.PC1` = "Economic",
+                      `Political.PC1` = "Political",
+                      `Security.PC1` = "Security",
+                      `Societal.PC1` = "Societal",
+                      `Environmental.PC1` = "Environmental")
+
+recode_fragility.level <- c(`Fragile` = "Fragile",
+                            `Extremely Fragile` = "Extremely Fragile",
+                            `Rest of the World` = "Rest of the World")
+
+##note the line below is focusing this analysis on ODA eligible countries. 
+##May need to modify this based on the direction of your analysis. 
+regions_names <- c("group_name","fragility.level","Economic.PC1",
+                   "Environmental.PC1","Political.PC1","Security.PC1",
+                   "Societal.PC1","Aggregate.PC1")
+
+list_2020_bygroups <- read_xls("./data/additional data/WB_2019_classifications.xls",
+                               sheet = "Groups") %>% 
+    clean_names() %>% 
+    rename(iso3c = country_code) %>% 
+    left_join(raw.data,by = "iso3c") %>% 
+    left_join(aggr.pca_adj[,c("iso3c","fragility.level")],by = "iso3c") %>% 
+    mutate(fragility.level = as.factor(fragility.level),
+           fragility.level = recode_factor(fragility.level,!!!recode_fragility.level),
+           fragility.level = as.character(fragility.level)) %>% 
+    select(group_code,group_name,iso3c,fragility.level,country_name,year,
+           ends_with("PC1")) %>% 
+    mutate(fragility.level = replace_na(fragility.level,"Rest of the World")) %>% 
+    left_join(ODA_recipients[,c("iso3c","category")],by = "iso3c") %>% 
+    rename(ODA_eligibility = category) %>% 
+    mutate(ODA_eligibility = replace_na(ODA_eligibility,"Rest of the World")) %>%
+    group_by(year,group_name,fragility.level,ODA_eligibility) %>% 
+    summarise_if(is.numeric,mean) %>%
+    ungroup() %>% 
+    mutate(year = as.numeric(year)) %>% 
+    filter(ODA_eligibility != "Rest of the World") %>% 
+    select(-ODA_eligibility) %>% #note at this point, all results are focusing on ODA eligible countries
+    pivot_longer(names_to = "dimension",values_to = "value",
+                 -c("group_name","fragility.level","year")) %>% #note at this point, you are flipping the sign for ease of readability (higher numbers = more fragile)
+    mutate(value = -value) 
+
+list_2020_bygroups_export <- list_2020_bygroups %>% 
+    pivot_wider(names_from = "dimension",values_from = "value") %>% 
+    split(.$year)
+
+list_2020_bygroups_export <- lapply(list_2020_bygroups_export,"[", ,regions_names)
+
+write.xlsx(list_2020_bygroups_export,"./data_out2017/Dataset - 2020 scores, by groups.xlsx")
+
+list_2020_groups_scaled_bygroupname <- list_2020_bygroups %>%  
+    group_by(year,group_name,dimension) %>% 
+    mutate(scaled_value = value/max(value)) %>% 
+    select(-value) %>% 
+    pivot_wider(names_from = "dimension",values_from = "scaled_value") %>% 
+    split(.$year)
+
+list_2020_groups_scaled_bygroupname <- lapply(list_2020_groups_scaled_bygroupname,"[", ,regions_names)
+
+write.xlsx(list_2020_groups_scaled_bygroupname,"./data_out2017/Dataset - 2020 scores, by groups, scaled.xlsx")
+
+###by dimension
+for(i in unique(list_2018_byregion_in2017$dimension)){
+    ggplot(data = list_2018_byregion_in2017 %>% filter(dimension == i),
+                                        mapping = aes(x = reorder(region,-value),y = -value)) + 
+    geom_col() +
+    theme_classic() +
+    labs(x = "",
+         y = "",
+         title = paste0("Among the contexts in the 2018 fragility framework, ",i," fragility is most severe in the following regions...")) +
+    theme(axis.line.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank())
+    ggsave(paste0("./graphs/regional_fragility/",i,"_2018.png"),width = 12)
+}
+
+###sub-regional results
+horn_of_africa <- c("ETH","SOM","DJI","ERI")
+sahel <- c("BFA","CMR","TCD","GMB","GIN","MRT","MLI","NER","NGA","SEN")
+
+horn_of_africa_scores <- results_2018_allpc %>% filter(year == 2017,
+                                                  iso3c %in% horn_of_africa) %>% 
+    select(iso3c,contains("PC1"))
+
+horn_of_africa_scores_aggregated <- setDT(horn_of_africa_scores)[,lapply(.SD,mean),.SDcols = c(2:7)
+                                                                 ][,region := "Horn of Africa"]
+
+sahel_scores <- results_2018_allpc %>% filter(year == 2017,
+                                         iso3c %in% sahel) %>% 
+    select(iso3c,contains("PC1"))
+
+sahel_scores_aggregated <- setDT(sahel_scores)[,lapply(.SD,mean),.SDcols = c(2:7)
+                                               ][,region := "Sahel"]
+
+average_fragile_context <- setDT(results_2018_allpc)[year == 2017 & Aggregate.PC1 < -1.2,lapply(.SD,mean),.SDcols = c(3,5,7,9,11,13)
+                                                ][,region := "Fragile Context"]
+
+average_ext_fragile_context <- setDT(results_2018_allpc)[year == 2017 & Aggregate.PC1 < -2.5,lapply(.SD,mean),.SDcols = c(3,5,7,9,11,13)
+                                                    ][,region := "Extremely Fragile Context"]
+
+subregional_aggregated <- rbind(horn_of_africa_scores_aggregated,sahel_scores_aggregated,
+                                average_fragile_context) %>% 
+    pivot_longer(names_to = "dimension",values_to = "value",-region) %>% 
+    mutate(dimension = as.factor(dimension)) %>% 
+    mutate(dimension = recode_factor(dimension,!!!recode_dimension))
+    
+for(i in unique(subregional_aggregated$dimension)){
+    ggplot(data = subregional_aggregated %>% filter(dimension == i),
+           mapping = aes(x = reorder(region,-value), y = -value)) + 
+        geom_col() +
+        theme_classic() + 
+        labs(x = "",y = "",
+             title = paste0("Among the contexts in the 2018 framework, ",i," fragility was most severe in...")) +
+        theme(axis.line.y = element_blank(),
+              axis.text.y = element_blank(),
+              axis.ticks.y = element_blank())
+    ggsave(paste0("./graphs/regional_fragility/",i,"_subreg_2018.png"),width = 10)
+}
+
+#IG 
+list_2018_byig <- list_2018_byclass %>% 
+    group_by(year,income_group) %>% 
+    summarise_if(is.numeric,median) %>% 
+    pivot_longer(names_to = "dimension",values_to = "value",
+                 -c(year,income_group))
+
+##analysis for latest year
+recode_dimension <- c(`Aggregate.PC1` = "Aggregate",
+                      `Economic.PC1` = "Economic",
+                      `Political.PC1` = "Political",
+                      `Security.PC1` = "Security",
+                      `Societal.PC1` = "Societal",
+                      `Environmental.PC1` = "Environmental")
+
+list_2018_byig_in2017 <- list_2018_byig %>% filter(year == 2017) %>% 
+    mutate(dimension = as.factor(dimension)) %>% 
+    mutate(dimension = recode_factor(dimension,!!!recode_dimension))
+
+###by dimension
+for(i in unique(list_2018_byig_in2017$dimension)){
+    ggplot(data = list_2018_byig_in2017 %>% filter(dimension == i),
+           mapping = aes(x = reorder(income_group,-value),y = -value)) + 
+        geom_col() +
+        theme_classic() +
+        labs(x = "",
+             y = "",
+             title = paste0("Among the contexts in the 2018 fragility framework, ",i," fragility is most severe in the following income groups...")) +
+        theme(axis.line.y = element_blank(),
+              axis.text.y = element_blank(),
+              axis.ticks.y = element_blank())
+    ggsave(paste0("./graphs/incomegroup_fragility/",i,"_2018.png"),width = 12)
+}
+list_reg_ig <- list(list_2018_byregion_in2017,list_2018_byig_in2017)
+read.xlsx(list_reg_ig,"./data_out2017/regional_incomegroup_fragility.xlsx")
+
+WB_regions_andIGs <- read_xls("./data/additional data/WB_2019_classifications.xls",skip = 4) %>%
+    clean_names() %>% 
+    slice(-1) %>% 
+    select(iso3c = code,region, income_group) %>% 
+    filter(complete.cases(region))
+
+WB_regions <- WB_regions_andIGs %>% 
+    group_by(region) %>% 
+    summarise(count_all = n())
+
+WB_IGs <- WB_regions_andIGs %>% 
+    group_by(income_group) %>% 
+    summarise(count_all = n())
+
+list2020_results_byregion_andIG <- WB_regions_andIGs %>% left_join(aggr.pca_adj,by = "iso3c") %>% 
+    filter(complete.cases(fragility.level))
+
+(list2020_results_byregion <- list2020_results_byregion_andIG %>% 
+    group_by(region) %>% 
+    summarise(count = n()) %>% 
+    left_join(WB_regions,by = "region") %>% 
+    mutate(proportion = count/count_all*100) %>% 
+    ggplot(aes(x = reorder(region,-count),y = count)) +
+    geom_col() +
+        labs(x = "",y = "Number of fragile contexts") +
+        theme_classic() +
+        geom_text(aes(label = paste0(count," (",round(proportion,2),"%)")),
+                  position = position_dodge(width = 0.9),vjust = -0.25)
+    )
+ggsave("./graphs/regional_fragility/Regional Distribution of Fragile Contexts (2020).jpg",list2020_results_byregion,
+       width = 10)
+
+(list2020_results_byIG <- list2020_results_byregion_andIG %>% 
+    group_by(income_group) %>% 
+    summarise(count = n()) %>% 
+    left_join(WB_IGs, by = "income_group") %>% 
+    mutate(proportion = count/count_all*100) %>% 
+    ggplot(aes(x = reorder(income_group,-count),y = count)) +
+    geom_col() +
+    labs(x = "",y = "Number of fragile contexts") + 
+    theme_classic() +
+    geom_text(aes(label = paste0(count," (",round(proportion,2),"%)")),
+              position = position_dodge(width = 0.9),vjust = -0.25))
+ggsave("./graphs/incomegroup_fragility/IG Distribution of Fragile Contexts (2020).jpg",list2020_results_byIG,
+       width = 10)

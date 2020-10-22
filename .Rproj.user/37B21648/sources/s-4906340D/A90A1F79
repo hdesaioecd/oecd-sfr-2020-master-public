@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1580129093740.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "A90A1F79",
+    "lastKnownWriteTime" : 1579887246,
+    "last_content_update" : 1579887246,
+    "path" : "V:/Desai_H/BACKUP/SFR 2020/oecd-sfr-2018-master/src/05-Changes Analysis.R",
+    "project_path" : "src/05-Changes Analysis.R",
+    "properties" : {
+        "cursorPosition" : "600,0",
+        "scrollLine" : "595"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

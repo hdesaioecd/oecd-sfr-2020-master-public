@@ -1,0 +1,117 @@
+iso3c,Economic,Environmental,Political,Security,Societal,fragility.level
+Yemen,Extreme,Extreme,Extreme,Extreme,Extreme,Extremely Fragile
+Somalia,Extreme,Extreme,Extreme,Extreme,Extreme,Extremely Fragile
+Congo - Kinshasa,High,Extreme,Extreme,High,Extreme,Extremely Fragile
+Chad,High,Extreme,Extreme,High,Extreme,Extremely Fragile
+Burundi,High,Extreme,Extreme,High,Extreme,Extremely Fragile
+Haiti,High,Extreme,High,Moderate,High,Extremely Fragile
+Guinea-Bissau,High,Extreme,High,Moderate,High,Fragile
+Comoros,High,Extreme,High,Moderate,High,Fragile
+Mozambique,High,Extreme,Low,High,High,Fragile
+Niger,High,Extreme,Low,High,High,Fragile
+Burkina Faso,High,Extreme,Low,High,High,Fragile
+Zambia,High,Extreme,Low,Low,High,Fragile
+Eswatini,High,Extreme,Low,Low,High,Fragile
+Malawi,High,Extreme,Low,Low,High,Rest of the World
+Uganda,High,Extreme,Low,Moderate,High,Fragile
+Madagascar,High,Extreme,Low,Moderate,High,Fragile
+Liberia,High,Extreme,Low,Moderate,High,Fragile
+Sierra Leone,High,Extreme,Low,Moderate,High,Fragile
+Lesotho,High,Extreme,Low,Moderate,High,Fragile
+Tanzania,High,Extreme,Low,Moderate,High,Fragile
+Gambia,High,Extreme,Low,Moderate,High,Fragile
+Zimbabwe,High,Extreme,Moderate,Low,High,Fragile
+Rwanda,High,Extreme,Moderate,Low,High,Rest of the World
+Papua New Guinea,High,High,Low,Moderate,High,Fragile
+Solomon Islands,High,High,Low,Moderate,High,Fragile
+Honduras,High,Moderate,Low,Moderate,High,Fragile
+Guatemala,High,Moderate,Low,Moderate,High,Fragile
+Gabon,High,Moderate,Low,Moderate,High,Rest of the World
+Guyana,High,Moderate,Minor,Low,Low,Rest of the World
+Suriname,High,Moderate,Minor,Low,Low,Rest of the World
+São Tomé & Príncipe,High,Moderate,Minor,Low,Low,Rest of the World
+Armenia,Low,Low,Low,Low,Low,Rest of the World
+North Macedonia,Low,Low,Low,Low,Low,Rest of the World
+Bosnia & Herzegovina,Low,Low,Low,Minor,Low,Rest of the World
+Montenegro,Low,Low,Low,Minor,Low,Rest of the World
+Tunisia,Low,Low,Minor,Low,Low,Rest of the World
+Georgia,Low,Low,Minor,Low,Low,Rest of the World
+Italy,Low,Low,Minor,Minor,Minor,Rest of the World
+Spain,Low,Low,Minor,Minor,Minor,Rest of the World
+Egypt,Low,Moderate,Moderate,High,Extreme,Rest of the World
+Turkey,Low,Moderate,Moderate,High,Extreme,Rest of the World
+Israel,Minor,Low,Minor,Low,Low,Rest of the World
+United States,Minor,Low,Minor,Low,Low,Rest of the World
+Chile,Minor,Low,Minor,Minor,Low,Rest of the World
+Romania,Minor,Low,Minor,Minor,Low,Rest of the World
+Bulgaria,Minor,Low,Minor,Minor,Low,Rest of the World
+Hungary,Minor,Low,Minor,Minor,Low,Rest of the World
+Croatia,Minor,Low,Minor,Minor,Low,Rest of the World
+Singapore,Minor,Low,Minor,Minor,Low,Rest of the World
+Australia,Minor,Low,Minor,Minor,Low,Rest of the World
+Cyprus,Minor,Low,Minor,Minor,Minor,Rest of the World
+Poland,Minor,Low,Minor,Minor,Minor,Rest of the World
+Slovakia,Minor,Low,Minor,Minor,Minor,Rest of the World
+Japan,Minor,Low,Minor,Minor,Minor,Rest of the World
+South Korea,Minor,Low,Minor,Minor,Minor,Rest of the World
+Latvia,Minor,Low,Minor,Minor,Minor,Rest of the World
+Czechia,Minor,Low,Minor,Minor,Minor,Rest of the World
+Slovenia,Minor,Low,Minor,Minor,Minor,Rest of the World
+Canada,Minor,Low,Minor,Minor,Minor,Rest of the World
+Portugal,Minor,Low,Minor,Minor,Minor,Rest of the World
+New Zealand,Minor,Low,Minor,Minor,Minor,Rest of the World
+United Kingdom,Minor,Minor,Minor,Minor,Minor,Rest of the World
+Ireland,Minor,Minor,Minor,Minor,Minor,Rest of the World
+Lithuania,Minor,Minor,Minor,Minor,Minor,Rest of the World
+Estonia,Minor,Minor,Minor,Minor,Minor,Rest of the World
+Belgium,Minor,Minor,Minor,Minor,Minor,Rest of the World
+Germany,Minor,Minor,Minor,Minor,Minor,Rest of the World
+Luxembourg,Minor,Minor,Minor,Minor,Minor,Rest of the World
+Iceland,Minor,Minor,Minor,Minor,Minor,Rest of the World
+Netherlands,Minor,Minor,Minor,Minor,Minor,Rest of the World
+Austria,Minor,Minor,Minor,Minor,Minor,Rest of the World
+Sweden,Minor,Minor,Minor,Minor,Minor,Rest of the World
+Switzerland,Minor,Minor,Minor,Minor,Minor,Rest of the World
+Denmark,Minor,Minor,Minor,Minor,Minor,Rest of the World
+Finland,Minor,Minor,Minor,Minor,Minor,Rest of the World
+Norway,Minor,Minor,Minor,Minor,Minor,Rest of the World
+Nigeria,Moderate,Extreme,Low,High,High,Fragile
+Kenya,Moderate,Extreme,Low,High,High,Fragile
+Bangladesh,Moderate,High,Moderate,High,Extreme,Fragile
+Nicaragua,Moderate,High,Moderate,High,Extreme,Fragile
+Sri Lanka,Moderate,Low,Low,Low,Low,Rest of the World
+Moldova,Moderate,Low,Low,Low,Low,Rest of the World
+Fiji,Moderate,Low,Minor,Low,Low,Rest of the World
+Malaysia,Moderate,Low,Minor,Low,Low,Rest of the World
+Argentina,Moderate,Low,Minor,Low,Low,Rest of the World
+Costa Rica,Moderate,Low,Minor,Low,Low,Rest of the World
+Mauritius,Moderate,Low,Minor,Low,Low,Rest of the World
+Brunei,Moderate,Low,Minor,Minor,Low,Rest of the World
+Uruguay,Moderate,Low,Minor,Minor,Low,Rest of the World
+Jamaica,Moderate,Low,Minor,Moderate,Low,Rest of the World
+Trinidad & Tobago,Moderate,Low,Minor,Moderate,Low,Rest of the World
+Qatar,Moderate,Low,Moderate,Minor,Moderate,Rest of the World
+United Arab Emirates,Moderate,Low,Moderate,Minor,Moderate,Rest of the World
+Belarus,Moderate,Low,Moderate,Minor,Moderate,Rest of the World
+Colombia,Moderate,Moderate,Low,High,High,Rest of the World
+Philippines,Moderate,Moderate,Low,High,High,Rest of the World
+Paraguay,Moderate,Moderate,Low,High,High,Rest of the World
+Maldives,Moderate,Moderate,Low,Low,Extreme,Rest of the World
+Vietnam,Moderate,Moderate,Low,Low,Extreme,Rest of the World
+Dominican Republic,Moderate,Moderate,Low,Low,High,Rest of the World
+Ghana,Moderate,Moderate,Low,Low,High,Rest of the World
+Bolivia,Moderate,Moderate,Minor,High,High,Rest of the World
+Peru,Moderate,Moderate,Minor,High,High,Rest of the World
+Mexico,Moderate,Moderate,Minor,High,High,Rest of the World
+Bhutan,Moderate,Moderate,Minor,Minor,Low,Rest of the World
+Mongolia,Moderate,Moderate,Minor,Minor,Low,Rest of the World
+Serbia,Moderate,Moderate,Minor,Minor,Low,Rest of the World
+Azerbaijan,Moderate,Moderate,Moderate,High,Extreme,Rest of the World
+Thailand,Moderate,Moderate,Moderate,High,Extreme,Rest of the World
+Turkmenistan,Moderate,Moderate,Moderate,Low,Moderate,Rest of the World
+China,Moderate,Moderate,Moderate,Low,Moderate,Rest of the World
+Saudi Arabia,Moderate,Moderate,Moderate,Low,Moderate,Rest of the World
+Russia,Moderate,Moderate,Moderate,Low,Moderate,Rest of the World
+Uzbekistan,Moderate,Moderate,Moderate,Minor,Moderate,Rest of the World
+Cuba,Moderate,Moderate,Moderate,Minor,Moderate,Rest of the World
+Kazakhstan,Moderate,Moderate,Moderate,Minor,Moderate,Rest of the World

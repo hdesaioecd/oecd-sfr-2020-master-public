@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1579792775036.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1743256081",
+    "id" : "A7BDEEA6",
+    "lastKnownWriteTime" : 1576831743,
+    "last_content_update" : 1576831743,
+    "path" : "V:/Desai_H/BACKUP/SFR 2020/oecd-sfr-2018-master/src/00 - Run All.R",
+    "project_path" : "src/00 - Run All.R",
+    "properties" : {
+        "cursorPosition" : "0,0",
+        "scrollLine" : "0"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
