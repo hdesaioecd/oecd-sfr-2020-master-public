@@ -164,5 +164,5 @@ raw.data = lapply(as.character(2012:2019), function(i){
 })
 raw.data = bind_rows(raw.data)
 output_folders <- c("./data_out2020/")
-fwrite(raw.data,paste0(output_folders,"Time series of Principal Component Analysis.csv"))
+fwrite(raw.data,paste0(output_folders,"Time Series of Principal Component Analysis.csv"))
 rmExcept(c("all.pca","raw.data"))
